@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>PricePulse Lagos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #00C48C; --green-dark: #009e72; --orange: #FF6B2B;
+    --yellow: #FFD600; --red: #FF3B3B; --bg: #0D0D0D;
+    --surface: #161616; --surface2: #1E1E1E; --border: #2A2A2A;
+    --text: #F5F5F0; --muted: #888;
+    --font-head: 'Syne', sans-serif; --font-body: 'DM Sans', sans-serif;
+  }
+  html, body { background: #0D0D0D; color: #F5F5F0; font-family: 'DM Sans', sans-serif; height: 100%; }
+  #root { height: 100%; }
+  .app { max-width: 430px; margin: 0 auto; min-height: 100vh; background: var(--bg); position: relative; overflow-x: hidden; }
+  .nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; position: sticky; top: 0; background: rgba(13,13,13,0.92); backdrop-filter: blur(12px); z-index: 100; border-bottom: 1px solid var(--border); }
+  .nav-logo { font-family: var(--font-head); font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .nav-logo span { color: var(--green); }
+  .nav-location { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); background: var(--surface); padding: 5px 10px; border-radius: 20px; cursor: pointer; border: 1px solid var(--border); }
+  .nav-location:hover { border-color: var(--green); color: var(--text); }
+  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: rgba(22,22,22,0.97); backdrop-filter: blur(16px); border-top: 1px solid var(--border); display: flex; z-index: 100; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 0 12px; cursor: pointer; font-size: 10px; color: var(--muted); font-family: var(--font-body); transition: color 0.2s; }
+  .nav-item.active { color: var(--green); }
+  .nav-item svg { width: 20px; height: 20px; }
+  .add-circle { width: 44px; height: 44px; background: var(--green); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -20px; box-shadow: 0 0 20px rgba(0,196,140,0.4); transition: transform 0.2s, box-shadow 0.2s; }
+  .add-circle:hover { transform: scale(1.08); box-shadow: 0 0 28px rgba(0,196,140,0.6); }
+  .add-circle svg { color: #000; }
+  .page { padding: 0 0 100px; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .hero-area { padding: 24px 20px 16px; background: linear-gradient(180deg, rgba(0,196,140,0.06) 0%, transparent 100%); }
+  .greeting { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .hero-title { font-family: var(--font-head); font-size: 26px; font-weight: 800; line-height: 1.15; margin-bottom: 18px; }
+  .hero-title em { color: var(--green); font-style: normal; }
+  .search-bar { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 12px 16px; transition: border-color 0.2s; }
+  .search-bar:focus-within { border-color: var(--green); }
+  .search-bar input { flex: 1; background: none; border: none; outline: none; font-family: var(--font-body); font-size: 15px; color: var(--text); }
+  .search-bar input::placeholder { color: var(--muted); }
+  .search-bar svg { color: var(--muted); flex-shrink: 0; }
+  .suggestions { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-top: 6px; overflow: hidden; }
+  .suggestion-item { padding: 11px 16px; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  .suggestion-item:last-child { border-bottom: none; }
+  .suggestion-item:hover { background: var(--surface2); }
+  .section-label { font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 20px 20px 10px; }
+  .cats-row { display: flex; gap: 10px; padding: 0 20px; overflow-x: auto; scrollbar-width: none; }
+  .cats-row::-webkit-scrollbar { display: none; }
+  .cat-chip { display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 12px 16px; cursor: pointer; flex-shrink: 0; transition: all 0.2s; min-width: 72px; }
+  .cat-chip:hover, .cat-chip.active { border-color: var(--green); background: rgba(0,196,140,0.08); }
+  .cat-chip span { font-size: 22px; }
+  .cat-chip p { font-size: 11px; color: var(--muted); font-weight: 500; }
+  .deals-banner { margin: 16px 20px; background: linear-gradient(135deg, #003d2b 0%, #001a13 100%); border: 1px solid rgba(0,196,140,0.25); border-radius: 16px; padding: 16px; position: relative; overflow: hidden; }
+  .deals-banner::before { content: ''; position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(0,196,140,0.12); border-radius: 50%; }
+  .deals-tag { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--green); margin-bottom: 4px; }
+  .deals-title { font-family: var(--font-head); font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+  .deals-items { display: flex; gap: 8px; flex-wrap: wrap; }
+  .deal-pill { background: rgba(0,196,140,0.12); border: 1px solid rgba(0,196,140,0.2); border-radius: 20px; padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .deal-pill .price { color: var(--green); font-weight: 700; }
+  .deal-pill .item-name { color: var(--muted); }
+  .price-card { margin: 0 20px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; cursor: pointer; transition: all 0.2s; position: relative; }
+  .price-card:hover { border-color: rgba(0,196,140,0.3); transform: translateY(-1px); }
+  .price-card.top-pick { border-color: var(--green); }
+  .top-badge { position: absolute; top: -1px; right: 16px; background: var(--green); color: #000; font-size: 9px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; padding: 3px 8px; border-radius: 0 0 8px 8px; }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .store-name { font-family: var(--font-head); font-size: 15px; font-weight: 700; }
+  .store-meta { display: flex; gap: 8px; margin-top: 3px; align-items: center; }
+  .store-area { font-size: 12px; color: var(--muted); }
+  .price-main { font-family: var(--font-head); font-size: 22px; font-weight: 800; color: var(--green); }
+  .card-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .confidence { display: flex; align-items: center; gap: 6px; }
+  .conf-bar { width: 60px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .conf-fill { height: 100%; border-radius: 2px; }
+  .conf-label { font-size: 11px; color: var(--muted); }
+  .timestamp { font-size: 11px; color: var(--muted); }
+  .trend-banner { margin: 0 20px 16px; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .trend-up { background: rgba(255,59,59,0.1); border: 1px solid rgba(255,59,59,0.2); }
+  .trend-down { background: rgba(0,196,140,0.08); border: 1px solid rgba(0,196,140,0.2); }
+  .trend-text b { display: block; font-size: 12px; font-weight: 600; }
+  .trend-text span { font-size: 11px; color: var(--muted); }
+  .sort-row { display: flex; gap: 8px; padding: 0 20px 16px; overflow-x: auto; scrollbar-width: none; }
+  .sort-row::-webkit-scrollbar { display: none; }
+  .sort-btn { padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-family: var(--font-body); transition: all 0.15s; }
+  .sort-btn.active { background: var(--green); color: #000; border-color: var(--green); font-weight: 700; }
+  .form-header { padding: 24px 20px 16px; background: linear-gradient(180deg, rgba(255,107,43,0.06) 0%, transparent 100%); }
+  .form-title { font-family: var(--font-head); font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .form-subtitle { font-size: 13px; color: var(--muted); }
+  .form-group { padding: 0 20px 16px; }
+  .form-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 8px; }
+  .form-input, .form-select { width: 100%; background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; padding: 13px 16px; font-family: var(--font-body); font-size: 15px; color: var(--text); outline: none; transition: border-color 0.2s; -webkit-appearance: none; appearance: none; }
+  .form-input:focus, .form-select:focus { border-color: var(--green); }
+  .form-select option { background: #161616; color: #F5F5F0; }
+  .price-input-wrap { position: relative; }
+  .naira-sign { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--muted); font-family: var(--font-head); font-weight: 700; }
+  .price-input-wrap .form-input { padding-left: 30px; }
+  .photo-upload { border: 1.5px dashed var(--border); border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+  .photo-upload:hover { border-color: var(--green); }
+  .photo-upload p { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .submit-btn { margin: 0 20px; width: calc(100% - 40px); background: var(--green); color: #000; border: none; border-radius: 14px; padding: 16px; font-family: var(--font-head); font-size: 16px; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 20px rgba(0,196,140,0.3); }
+  .submit-btn:hover { background: var(--green-dark); transform: translateY(-1px); }
+  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .points-preview { margin: 12px 20px 0; background: rgba(255,214,0,0.06); border: 1px solid rgba(255,214,0,0.15); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .points-preview b { color: var(--yellow); }
+  .insights-hero { padding: 24px 20px 16px; }
+  .insights-title { font-family: var(--font-head); font-size: 22px; font-weight: 800; margin-bottom: 16px; }
+  .area-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-bottom: 4px; }
+  .area-tab { padding: 7px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; white-space: nowrap; background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-family: var(--font-body); transition: all 0.15s; }
+  .area-tab.active { background: var(--orange); color: #fff; border-color: var(--orange); font-weight: 600; }
+  .chart-card { margin: 0 20px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+  .chart-title { font-family: var(--font-head); font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .chart-sub { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+  .mini-chart { height: 80px; position: relative; display: flex; align-items: flex-end; gap: 6px; }
+  .bar { flex: 1; border-radius: 4px 4px 0 0; position: relative; cursor: pointer; }
+  .bar-label { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--muted); white-space: nowrap; }
+  .chart-legend { display: flex; gap: 16px; margin-top: 28px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+  .legend-item { display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: var(--muted); }
+  .savings-card { margin: 0 20px 16px; background: linear-gradient(135deg, #1a1200 0%, #0d0d0d 100%); border: 1px solid rgba(255,214,0,0.2); border-radius: 16px; padding: 16px; }
+  .savings-label { font-size: 11px; color: var(--yellow); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .savings-amount { font-family: var(--font-head); font-size: 32px; font-weight: 800; color: var(--yellow); }
+  .savings-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .alert-card { margin: 0 20px 12px; background: rgba(255,59,59,0.06); border: 1px solid rgba(255,59,59,0.15); border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .alert-card.green { background: rgba(0,196,140,0.06); border-color: rgba(0,196,140,0.15); }
+  .profile-hero { padding: 24px 20px; text-align: center; background: linear-gradient(180deg, rgba(0,196,140,0.06) 0%, transparent 100%); }
+  .avatar { width: 72px; height: 72px; background: linear-gradient(135deg, var(--green), var(--orange)); border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-family: var(--font-head); font-size: 28px; font-weight: 800; color: #000; }
+  .profile-name { font-family: var(--font-head); font-size: 20px; font-weight: 800; }
+  .profile-rank { font-size: 13px; color: var(--green); margin-top: 2px; }
+  .rank-card { margin: 0 20px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+  .rank-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .rank-label { font-size: 12px; color: var(--muted); }
+  .rank-val { font-family: var(--font-head); font-size: 16px; font-weight: 800; }
+  .xp-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .xp-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--yellow)); border-radius: 3px; width: 68%; }
+  .xp-note { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 20px 16px; }
+  .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+  .stat-val { font-family: var(--font-head); font-size: 24px; font-weight: 800; margin-bottom: 2px; }
+  .stat-lbl { font-size: 11px; color: var(--muted); }
+  .badge-row { display: flex; gap: 10px; padding: 0 20px 16px; overflow-x: auto; scrollbar-width: none; }
+  .badge { display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px; min-width: 70px; flex-shrink: 0; }
+  .badge.earned { border-color: var(--yellow); background: rgba(255,214,0,0.05); }
+  .badge-icon { font-size: 24px; }
+  .badge-name { font-size: 10px; color: var(--muted); text-align: center; }
+  .badge.earned .badge-name { color: var(--yellow); }
+  .success-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(8px); }
+  .success-card { background: var(--surface); border: 1px solid var(--green); border-radius: 24px; padding: 32px 24px; text-align: center; max-width: 300px; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .success-icon { font-size: 52px; margin-bottom: 12px; }
+  .success-title { font-family: var(--font-head); font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+  .success-sub { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+  .points-earned { font-family: var(--font-head); font-size: 36px; font-weight: 800; color: var(--yellow); }
+  .points-label { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+  .close-btn { background: var(--green); color: #000; border: none; border-radius: 12px; padding: 12px 32px; font-family: var(--font-head); font-size: 15px; font-weight: 800; cursor: pointer; }
+  .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 12px; color: var(--muted); font-size: 14px; }
+  .spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); font-size: 14px; }
+  .empty-icon { font-size: 36px; margin-bottom: 10px; }
+  .error-banner { margin: 0 20px 12px; background: rgba(255,59,59,0.08); border: 1px solid rgba(255,59,59,0.2); border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #ff8080; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+// ── SUPABASE ──────────────────────────────────────────────────────────────────
+const SUPABASE_URL = "https://pnodoheckpndksnfnjel.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBub2RvaGVjcG5ka3NvbmZuamVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxMjIwMjcsImV4cCI6MjA5MDY5ODAyN30.afLv5x4Cu290qkUSigiwkrFEn9Vtvfv342tngzoRsv0";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function timeAgo(ts) {
+  if (!ts) return "recently";
+  const diff = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (diff < 60)   return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400)return `${Math.floor(diff/3600)}h ago`;
+  return `${Math.floor(diff/86400)}d ago`;
+}
+
+function getConf(c) {
+  if (c >= 90) return { color: "#00C48C", label: "High" };
+  if (c >= 75) return { color: "#FFD600", label: "Med"  };
+  return { color: "#FF6B2B", label: "Low" };
+}
+
+const ITEMS = [
+  { id: "rice",    label: "Rice (1 cup)",   icon: "🍚" },
+  { id: "eggs",    label: "Eggs (crate)",   icon: "🥚" },
+  { id: "bread",   label: "Bread (loaf)",   icon: "🍞" },
+  { id: "indomie", label: "Indomie (pack)", icon: "🍜" },
+  { id: "beans",   label: "Beans (paint)",  icon: "🫘" },
+  { id: "tomato",  label: "Tomatoes (5)",   icon: "🍅" },
+];
+
+const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+// ── COMPONENTS ────────────────────────────────────────────────────────────────
+function Spinner() {
+  return <div className="loading-state"><div className="spinner"/><span>Loading prices...</span></div>;
+}
+
+function PriceCard({ item, topPick }) {
+  const conf = getConf(item.confidence);
+  return (
+    <div className={`price-card ${topPick ? "top-pick" : ""}`}>
+      {topPick && <div className="top-badge">⚡ Best Price</div>}
+      <div className="card-top">
+        <div>
+          <div className="store-name">{item.store}</div>
+          <div className="store-meta">
+            <span className="store-area">📍 {item.area}</span>
+          </div>
+        </div>
+        <div style={{textAlign:"right"}}>
+          <div className="price-main">₦{Number(item.price).toLocaleString()}</div>
+        </div>
+      </div>
+      <div className="card-bottom">
+        <div className="confidence">
+          <div className="conf-bar">
+            <div className="conf-fill" style={{width:`${item.confidence}%`, background:conf.color}} />
+          </div>
+          <span className="conf-label" style={{color:conf.color}}>{item.confidence}% {conf.label}</span>
+        </div>
+        <span className="timestamp">🕐 {timeAgo(item.timestamp)}</span>
+      </div>
+    </div>
+  );
+}
+
+function MiniBarChart({ data, color }) {
+  const max = Math.max(...data), min = Math.min(...data);
+  return (
+    <div className="mini-chart">
+      {data.map((v, i) => {
+        const h = 16 + ((v - min) / (max - min || 1)) * 64;
+        const isLast = i === data.length - 1;
+        return (
+          <div key={i} className="bar" style={{height:h, background: isLast ? color : "rgba(255,255,255,0.06)"}}>
+            <span className="bar-label">{DAYS[i]}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── HOME PAGE ─────────────────────────────────────────────────────────────────
+function HomePage({ onSearch }) {
+  const [query,     setQuery]     = useState("");
+  const [showSugg,  setShowSugg]  = useState(false);
+  const [cheapest,  setCheapest]  = useState([]);
+  const [recent,    setRecent]    = useState([]);
+  const [loading,   setLoading]   = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      // cheapest per item
+      const { data } = await sb.from("prices").select("*").order("price", { ascending: true }).limit(40);
+      if (data) {
+        const seen = {};
+        const cheap = [];
+        data.forEach(r => { if (!seen[r.item]) { seen[r.item] = true; cheap.push(r); } });
+        setCheapest(cheap);
+      }
+      // most recent
+      const { data: rec } = await sb.from("prices").select("*").order("timestamp", { ascending: false }).limit(3);
+      if (rec) setRecent(rec);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  const filtered = ITEMS.filter(i => i.label.toLowerCase().includes(query.toLowerCase()) && query.length > 0);
+
+  return (
+    <div className="page">
+      <div className="hero-area">
+        <div className="greeting">Good morning, Yaba 👋</div>
+        <h1 className="hero-title">Find the <em>cheapest</em> prices near you</h1>
+        <div className="search-bar">
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input
+            placeholder="Search item e.g. rice, eggs..."
+            value={query}
+            onChange={e => { setQuery(e.target.value); setShowSugg(true); }}
+            onFocus={() => setShowSugg(true)}
+          />
+          {query && <span style={{cursor:"pointer",color:"var(--muted)",fontSize:18}} onClick={() => { setQuery(""); setShowSugg(false); }}>×</span>}
+        </div>
+        {showSugg && filtered.length > 0 && (
+          <div className="suggestions">
+            {filtered.map(i => (
+              <div key={i.id} className="suggestion-item" onClick={() => { onSearch(i.id); setShowSugg(false); setQuery(""); }}>
+                <span style={{fontSize:18}}>{i.icon}</span>{i.label}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="section-label">Browse Category</div>
+      <div className="cats-row">
+        {ITEMS.map(i => (
+          <div key={i.id} className="cat-chip" onClick={() => onSearch(i.id)}>
+            <span>{i.icon}</span><p>{i.label.split(" ")[0]}</p>
+          </div>
+        ))}
+      </div>
+
+      {!loading && cheapest.length > 0 && (
+        <div className="deals-banner">
+          <div className="deals-tag">⚡ Today's Cheapest</div>
+          <div className="deals-title">Best deals in Yaba right now</div>
+          <div className="deals-items">
+            {cheapest.slice(0,4).map((p,i) => {
+              const it = ITEMS.find(x => x.id === p.item);
+              return (
+                <div key={i} className="deal-pill">
+                  <span className="price">₦{Number(p.price).toLocaleString()}</span>
+                  <span className="item-name">{it ? it.label.split(" ")[0] : p.item}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="section-label">Recent Updates</div>
+      {loading ? <Spinner /> : recent.length === 0
+        ? <div className="empty-state"><div className="empty-icon">📭</div><p>No prices yet — be the first to report one!</p></div>
+        : recent.map((p, i) => <PriceCard key={p.id} item={p} topPick={i===0} />)
+      }
+    </div>
+  );
+}
+
+// ── RESULTS PAGE ──────────────────────────────────────────────────────────────
+function ResultsPage({ itemId }) {
+  const [sort,    setSort]    = useState("cheapest");
+  const [prices,  setPrices]  = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
+  const item = ITEMS.find(i => i.id === itemId) || ITEMS[0];
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true); setError(null);
+      const { data, error: err } = await sb.from("prices").select("*").eq("item", itemId).order("price", { ascending: true });
+      if (err) { setError(err.message); }
+      else { setPrices(data || []); }
+      setLoading(false);
+    }
+    load();
+  }, [itemId]);
+
+  const sorted = [...prices].sort((a, b) => {
+    if (sort === "cheapest")      return a.price - b.price;
+    if (sort === "most reliable") return b.confidence - a.confidence;
+    return b.confidence - a.confidence;
+  });
+
+  const avgNow = prices.length ? Math.round(prices.reduce((s,p) => s + Number(p.price), 0) / prices.length) : 0;
+  const minP   = prices.length ? Math.min(...prices.map(p => p.price)) : 0;
+  const maxP   = prices.length ? Math.max(...prices.map(p => p.price)) : 0;
+  const trending = maxP - minP > minP * 0.1 ? "up" : "stable";
+
+  return (
+    <div className="page">
+      <div style={{padding:"20px 20px 12px"}}>
+        <div style={{fontSize:13,color:"var(--muted)",marginBottom:6}}>Results for</div>
+        <div style={{fontFamily:"var(--font-head)",fontSize:22,fontWeight:800,display:"flex",alignItems:"center",gap:8}}>
+          <span>{item.icon}</span> {item.label}
+        </div>
+        {!loading && <div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>{prices.length} reports · Avg ₦{avgNow.toLocaleString()}</div>}
+      </div>
+
+      {!loading && trending === "up" && prices.length > 1 && (
+        <div className="trend-banner trend-up">
+          <span style={{fontSize:18}}>📈</span>
+          <div className="trend-text"><b style={{color:"var(--red)"}}>Price Variation High</b><span>₦{minP.toLocaleString()} – ₦{maxP.toLocaleString()} across stores. Compare carefully.</span></div>
+        </div>
+      )}
+
+      {error && <div className="error-banner">⚠️ Could not load prices: {error}</div>}
+
+      <div className="sort-row">
+        {["cheapest","most reliable"].map(s => (
+          <button key={s} className={`sort-btn ${sort===s?"active":""}`} onClick={() => setSort(s)}>
+            {s==="cheapest"?"💰 Cheapest":"✅ Most Reliable"}
+          </button>
+        ))}
+      </div>
+
+      {loading ? <Spinner /> : sorted.length === 0
+        ? <div className="empty-state"><div className="empty-icon">🔍</div><p>No prices reported for {item.label} yet.<br/>Be the first to add one!</p></div>
+        : sorted.map((p, i) => <PriceCard key={p.id} item={p} topPick={i===0} />)
+      }
+    </div>
+  );
+}
+
+// ── ADD PAGE ──────────────────────────────────────────────────────────────────
+function AddPage({ onSubmit }) {
+  const [item,       setItem]       = useState("");
+  const [price,      setPrice]      = useState("");
+  const [store,      setStore]      = useState("");
+  const [area,       setArea]       = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error,      setError]      = useState(null);
+
+  const valid = item && price && store && area && !submitting;
+
+  async function handleSubmit() {
+    if (!valid) return;
+    setSubmitting(true); setError(null);
+    const { error: err } = await sb.from("prices").insert([{
+      item, price: Number(price), store, area,
+      confidence: 80,
+      verified: false,
+      timestamp: new Date().toISOString(),
+    }]);
+    setSubmitting(false);
+    if (err) { setError(err.message); return; }
+    onSubmit();
+  }
+
+  return (
+    <div className="page">
+      <div className="form-header">
+        <div className="form-title">Report a Price 📸</div>
+        <div className="form-subtitle">Help your community find the best deals</div>
+      </div>
+
+      {error && <div className="error-banner" style={{margin:"0 20px 12px"}}>⚠️ {error}</div>}
+
+      <div className="form-group">
+        <label className="form-label">Item</label>
+        <select className="form-select" value={item} onChange={e => setItem(e.target.value)}>
+          <option value="">Select item...</option>
+          {ITEMS.map(i => <option key={i.id} value={i.id}>{i.icon} {i.label}</option>)}
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Price (₦)</label>
+        <div className="price-input-wrap">
+          <span className="naira-sign">₦</span>
+          <input className="form-input" type="number" placeholder="0" value={price} onChange={e => setPrice(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Store / Market Name</label>
+        <input className="form-input" placeholder="e.g. Mama Ngozi Provisions" value={store} onChange={e => setStore(e.target.value)} />
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Area</label>
+        <select className="form-select" value={area} onChange={e => setArea(e.target.value)}>
+          <option value="">Select area...</option>
+          <option>Yaba</option><option>Lekki</option><option>Ikeja</option>
+          <option>Surulere</option><option>Oshodi</option>
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Photo (Optional)</label>
+        <div className="photo-upload">
+          <div style={{fontSize:28}}>📷</div>
+          <p>Tap to add a receipt or price photo</p>
+          <p style={{fontSize:11,marginTop:4}}>+10 bonus points with photo</p>
+        </div>
+      </div>
+
+      <button className="submit-btn" onClick={handleSubmit} disabled={!valid}>
+        {submitting ? "Submitting..." : "Submit Price Report →"}
+      </button>
+      <div className="points-preview">
+        <span>🏅</span><span>You'll earn <b>+25 points</b> for this submission</span>
+      </div>
+    </div>
+  );
+}
+
+// ── INSIGHTS PAGE ─────────────────────────────────────────────────────────────
+function InsightsPage() {
+  const [area,       setArea]       = useState("Yaba");
+  const [activeItem, setActiveItem] = useState("rice");
+  const [chartData,  setChartData]  = useState([]);
+  const [savings,    setSavings]    = useState(0);
+  const [loading,    setLoading]    = useState(true);
+  const item = ITEMS.find(i => i.id === activeItem);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const { data } = await sb.from("prices").select("*").eq("item", activeItem).eq("area", area).order("timestamp", { ascending: true }).limit(50);
+      if (data && data.length > 0) {
+        // group into up to 7 buckets
+        const prices = data.map(d => Number(d.price));
+        const chunk  = Math.ceil(prices.length / 7);
+        const buckets = [];
+        for (let i = 0; i < 7; i++) {
+          const slice = prices.slice(i * chunk, (i + 1) * chunk);
+          buckets.push(slice.length ? Math.round(slice.reduce((a,b) => a+b,0)/slice.length) : (buckets[buckets.length-1] || prices[0]));
+        }
+        setChartData(buckets);
+        const minP = Math.min(...prices), maxP = Math.max(...prices);
+        setSavings(maxP - minP);
+      } else {
+        setChartData([]);
+        setSavings(0);
+      }
+      setLoading(false);
+    }
+    load();
+  }, [activeItem, area]);
+
+  const diff = chartData.length > 1 ? chartData[chartData.length-1] - chartData[0] : 0;
+  const pct  = chartData[0] ? Math.abs(Math.round((diff / chartData[0]) * 100)) : 0;
+
+  return (
+    <div className="page">
+      <div className="insights-hero">
+        <div className="insights-title">Price Insights 📊</div>
+        <div className="area-tabs">
+          {["Yaba","Lekki","Ikeja"].map(a => (
+            <div key={a} className={`area-tab ${area===a?"active":""}`} onClick={() => setArea(a)}>{a}</div>
+          ))}
+        </div>
+      </div>
+
+      <div className="savings-card">
+        <div className="savings-label">💡 Potential Savings</div>
+        <div className="savings-amount">{savings > 0 ? `₦${savings.toLocaleString()}` : "—"}</div>
+        <div className="savings-desc">between cheapest and most expensive {activeItem} in {area}</div>
+      </div>
+
+      <div className="section-label">Price Trend by Item</div>
+      <div className="cats-row" style={{marginBottom:12}}>
+        {ITEMS.slice(0,4).map(i => (
+          <div key={i.id} className={`cat-chip ${activeItem===i.id?"active":""}`} onClick={() => setActiveItem(i.id)}>
+            <span>{i.icon}</span><p>{i.label.split(" ")[0]}</p>
+          </div>
+        ))}
+      </div>
+
+      {loading ? <Spinner /> : chartData.length === 0
+        ? <div className="empty-state"><div className="empty-icon">📊</div><p>No data yet for {item?.label} in {area}</p></div>
+        : (
+          <div className="chart-card">
+            <div className="chart-title">{item?.icon} {item?.label} — {area}</div>
+            <div className="chart-sub">{pct > 0 ? (diff > 0 ? `↑ Up ${pct}% across reports` : `↓ Down ${pct}% across reports`) : "Stable prices"} · Latest: ₦{chartData[chartData.length-1]?.toLocaleString()}</div>
+            <MiniBarChart data={chartData} color={diff > 0 ? "#FF3B3B" : "#00C48C"} />
+            <div className="chart-legend">
+              <div className="legend-item"><div className="legend-dot" style={{background: diff>0?"#FF3B3B":"#00C48C"}} /><span>Latest</span></div>
+              <div className="legend-item"><div className="legend-dot" style={{background:"rgba(255,255,255,0.06)"}} /><span>Earlier</span></div>
+            </div>
+          </div>
+        )
+      }
+    </div>
+  );
+}
+
+// ── PROFILE PAGE ──────────────────────────────────────────────────────────────
+function ProfilePage() {
+  const [count, setCount] = useState("—");
+  useEffect(() => {
+    sb.from("prices").select("*", { count: "exact", head: true }).then(({ count: c }) => { if (c !== null) setCount(c); });
+  }, []);
+
+  const badges = [
+    { icon:"🏆", name:"Top Reporter", earned:true  },
+    { icon:"🔥", name:"7-day streak", earned:true  },
+    { icon:"⚡", name:"Fast Finder",  earned:true  },
+    { icon:"🌍", name:"Explorer",     earned:false },
+    { icon:"💎", name:"Diamond",      earned:false },
+  ];
+  return (
+    <div className="page">
+      <div className="profile-hero">
+        <div className="avatar">TK</div>
+        <div className="profile-name">Tunde Kareem</div>
+        <div className="profile-rank">⭐ Gold Reporter · Yaba</div>
+      </div>
+      <div className="rank-card">
+        <div className="rank-row"><span className="rank-label">Total Points</span><span className="rank-val" style={{color:"var(--yellow)"}}>2,480 pts</span></div>
+        <div className="rank-row"><span className="rank-label">Rank</span><span className="rank-val">#14 in Yaba</span></div>
+        <div className="xp-bar"><div className="xp-fill" /></div>
+        <div className="xp-note">520 pts to Platinum rank</div>
+      </div>
+      <div className="stats-grid">
+        <div className="stat-box"><div className="stat-val" style={{color:"var(--green)"}}>47</div><div className="stat-lbl">Prices Reported</div></div>
+        <div className="stat-box"><div className="stat-val" style={{color:"var(--orange)"}}>312</div><div className="stat-lbl">Helpful Votes</div></div>
+        <div className="stat-box"><div className="stat-val" style={{color:"var(--yellow)"}}>7</div><div className="stat-lbl">Day Streak 🔥</div></div>
+        <div className="stat-box"><div className="stat-val" style={{color:"var(--text)"}}>{count}</div><div className="stat-lbl">Total DB Prices</div></div>
+      </div>
+      <div className="section-label">Badges</div>
+      <div className="badge-row">
+        {badges.map((b, i) => (
+          <div key={i} className={`badge ${b.earned?"earned":""}`}>
+            <span className="badge-icon">{b.icon}</span>
+            <span className="badge-name">{b.name}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── APP SHELL ─────────────────────────────────────────────────────────────────
+function App() {
+  const [tab,         setTab]         = useState("home");
+  const [searchItem,  setSearchItem]  = useState(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  const handleSearch = (id) => { setSearchItem(id); setTab("results"); };
+  const handleSubmit = ()   => { setShowSuccess(true); };
+
+  useEffect(() => { if (tab !== "results") setSearchItem(null); }, [tab]);
+
+  return (
+    <div className="app">
+      <div className="nav">
+        <div className="nav-logo">Price<span>Pulse</span></div>
+        <div className="nav-location"><span>📍</span> Yaba, Lagos ▾</div>
+      </div>
+
+      {tab === "home"     && <HomePage    onSearch={handleSearch} />}
+      {tab === "results"  && <ResultsPage itemId={searchItem || "rice"} />}
+      {tab === "add"      && <AddPage     onSubmit={handleSubmit} />}
+      {tab === "insights" && <InsightsPage />}
+      {tab === "profile"  && <ProfilePage />}
+
+      <div className="bottom-nav">
+        <div className={`nav-item ${tab==="home"?"active":""}`} onClick={() => setTab("home")}>
+          <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/></svg>
+          Home
+        </div>
+        <div className={`nav-item ${tab==="results"?"active":""}`} onClick={() => { setSearchItem("rice"); setTab("results"); }}>
+          <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Search
+        </div>
+        <div className="nav-item" onClick={() => setTab("add")}>
+          <div className="add-circle">
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          </div>
+        </div>
+        <div className={`nav-item ${tab==="insights"?"active":""}`} onClick={() => setTab("insights")}>
+          <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+          Insights
+        </div>
+        <div className={`nav-item ${tab==="profile"?"active":""}`} onClick={() => setTab("profile")}>
+          <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          Profile
+        </div>
+      </div>
+
+      {showSuccess && (
+        <div className="success-overlay" onClick={() => { setShowSuccess(false); setTab("home"); }}>
+          <div className="success-card" onClick={e => e.stopPropagation()}>
+            <div className="success-icon">🎉</div>
+            <div className="success-title">Price Reported!</div>
+            <div className="success-sub">Your data helps Lagos save money</div>
+            <div className="points-earned">+25</div>
+            <div className="points-label">points earned</div>
+            <button className="close-btn" onClick={() => { setShowSuccess(false); setTab("home"); }}>Back to Home</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
